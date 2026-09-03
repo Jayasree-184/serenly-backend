@@ -1,0 +1,233 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum MoodLevel {
+  VERY_LOW
+  LOW
+  OKAY
+  GOOD
+  GREAT
+}
+
+model User {
+  id                String             @id @default(uuid())
+  email             String             @unique
+  passwordHash      String
+  displayName       String
+  preferredLanguage String             @default("en")
+  role              Role               @default(USER)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  sessions          Session[]
+  moodEntries       MoodEntry[]
+  journalEntries    JournalEntry[]
+  goals             Goal[]
+  medications       Medication[]
+  communityPosts    CommunityPost[]
+  comments          CommunityComment[]
+  reportsCreated    CommunityReport[]  @relation("Reporter")
+  safetyPlan        SafetyPlan?
+  notifications     Notification[]
+
+  @@index([email])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  tokenHash    String   @unique
+  userAgent    String?
+  ipAddress    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+}
+
+model MoodEntry {
+  id           String    @id @default(uuid())
+  userId       String
+  moodLevel    MoodLevel
+  moodScore    Int
+  emotionTags  String[]
+  energyLevel  Int
+  sleepQuality String?
+  contextTags  String[]
+  note         String?
+  createdAt    DateTime  @default(now())
+
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, createdAt])
+}
+
+model JournalEntry {
+  id           String    @id @default(uuid())
+  userId       String
+  title        String?
+  content      String
+  prompt       String?
+  tags         String[]
+  wordCount    Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, createdAt])
+}
+
+model Goal {
+  id           String    @id @default(uuid())
+  userId       String
+  text         String
+  isCompleted  Boolean   @default(false)
+  completedAt  DateTime?
+  orderIndex   Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+}
+
+model Medication {
+  id           String               @id @default(uuid())
+  userId       String
+  name         String
+  dose         String?
+  timeOfDay    String
+  frequency    String               @default("daily")
+  isActive     Boolean              @default(true)
+  instructions String?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+
+  reminders    MedicationReminder[]
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId])
+}
+
+model MedicationReminder {
+  id           String     @id @default(uuid())
+  medicationId String
+  scheduledFor DateTime
+  isTaken      Boolean    @default(false)
+  takenAt      DateTime?
+
+  medication   Medication @relation(fields: [medicationId], references: [id], onDelete: Cascade)
+  @@index([medicationId])
+}
+
+model CommunityPost {
+  id           String             @id @default(uuid())
+  userId       String
+  content      String
+  isModerated  Boolean            @default(false)
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments     CommunityComment[]
+  reports      CommunityReport[]
+  @@index([createdAt])
+}
+
+model CommunityComment {
+  id           String        @id @default(uuid())
+  postId       String
+  userId       String
+  content      String
+  createdAt    DateTime      @default(now())
+
+  post         CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([postId])
+}
+
+model CommunityReport {
+  id           String        @id @default(uuid())
+  reporterId   String
+  postId       String?
+  reason       String
+  status       String        @default("pending")
+  createdAt    DateTime      @default(now())
+
+  reporter     User          @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  post         CommunityPost? @relation(fields: [postId], references: [id], onDelete: Cascade)
+}
+
+model SafetyPlan {
+  id                   String          @id @default(uuid())
+  userId               String          @unique
+  warningSigns         String[]
+  copingStrategies     String[]
+  safeEnvironments     String[]
+  trustedContacts      SafetyContact[]
+  professionalContacts String[]
+  updatedAt            DateTime        @updatedAt
+
+  user                 User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model SafetyContact {
+  id           String      @id @default(uuid())
+  safetyPlanId String
+  name         String
+  relationship String?
+  phoneNumber  String
+  safetyPlan   SafetyPlan  @relation(fields: [safetyPlanId], references: [id], onDelete: Cascade)
+}
+
+model Professional {
+  id             String    @id @default(uuid())
+  name           String
+  title          String
+  specialization String[]
+  languages      String[]
+  bio            String
+  isVerified     Boolean   @default(true)
+  availability   String?
+  contactEmail   String?
+  createdAt      DateTime  @default(now())
+}
+
+model Resource {
+  id            String   @id @default(uuid())
+  slug          String   @unique
+  title         String
+  titleTa       String?
+  description   String
+  descriptionTa String?
+  content       String
+  contentTa     String?
+  category      String
+  readingTime   Int
+  source        String?
+  createdAt     DateTime @default(now())
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  link      String?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, isRead])
+}
