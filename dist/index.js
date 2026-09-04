@@ -1,3 +1,4 @@
+import 'express-async-errors';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -8,6 +9,7 @@ import { apiRouter } from './routes/index.js';
 import { privacyLogger } from './middleware/privacyLogger.js';
 import { globalErrorHandler } from './middleware/errorHandler.js';
 const app = express();
+app.set('trust proxy', 1);
 // Security Headers
 app.use(helmet({
     contentSecurityPolicy: false, // Managed by client Vite dev & prod headers

@@ -19,7 +19,7 @@ export async function getPosts(_req: AuthenticatedRequest, res: Response) {
   })
 
   res.json({
-    posts: posts.map((p) => ({
+    posts: posts.map((p: any) => ({
       id: p.id,
       content: p.content,
       author: p.user.displayName,

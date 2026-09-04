@@ -55,7 +55,7 @@ export async function getMoodSummary(req: AuthenticatedRequest, res: Response) {
   res.json({
     checkInsThisWeek,
     recentMoods,
-    weeklyArc: recentMoods.map((m) => ({
+    weeklyArc: recentMoods.map((m: any) => ({
       score: m.moodScore,
       date: m.createdAt.toISOString().split('T')[0],
     })),
